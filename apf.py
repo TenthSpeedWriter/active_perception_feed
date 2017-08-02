@@ -1,14 +1,42 @@
 from uuid import uuid4
 import tflearn
 
+
 class InputStreamEncoder:
     """A base class for any model which
         1: Trains as an autoencoder, and
         2: Converts a given input format into a 1-dimensional output array
     """
-    # Mostly writing this in case I want to make it an abstract
+    def train(self, train_data,
+              batch_size=10,
+              epochs=3,
+              tensorboard_verbose=0):
+        """
+        Train, from the decoder, the network's ability to process; understand;
+        and recreate date fed to the encoder.
 
-class LinearEncoder:
+        :param train_data: A set from which to draw training data
+        :param batch_size: Size of each individual training batch
+        :param epochs: Number of epochs - times each training row is used
+        :param tensorboard_verbose: Verbosity level (0 through 3)
+        """
+        run_id = "Input autoencoder training: " + str(self.model_id)
+
+        self.model = tflearn.DNN(self.net,
+                                 tensorboard_verbose=tensorboard_verbose)
+
+        # Add a shorter reference to self.model.session, especially
+        # considering it will also be the default session for the class.
+        self.session = self.model.session
+
+        # And of course, train the model.
+        self.model.fit(train_data, train_data,
+                       batch_size=batch_size,
+                       n_epoch=epochs,
+                       run_id=run_id)
+
+
+class LinearEncoder(InputStreamEncoder):
     def __init__(self, input_size, output_size,
                  model_id=None,
                  decoder_activation="sigmoid",
@@ -47,26 +75,6 @@ class LinearEncoder:
                                       learning_rate=learn_rate,
                                       loss=loss_func)
 
-    def train(self, train_data,
-              batch_size=10,
-              epochs=3,
-              tensorboard_verbose=0):
-        """
-        Train, from the decoder, the network's ability to process; understand;
-        and recreate date fed to the encoder.
 
-        :param train_data: A set from which to draw training data
-        :param batch_size: Size of each individual training batch
-        :param epochs: Number of epochs - times each training row is used
-        :param tensorboard_verbose: Verbosity level (0 through 3)
-        """
-        run_id = "Input autoencoder training: " + str(self.model_id)
-
-        self.model = tflearn.DNN(self.net,
-                                 tensorboard_verbose=tensorboard_verbose)
-        self.model.fit(train_data, train_data,
-                       batch_size=batch_size,
-                       n_epoch=epochs,
-                       run_id=run_id)
 
 # I'd like to make a conv2d option available, too!
