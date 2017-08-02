@@ -14,7 +14,7 @@ class LinearEncoder:
                  decoder_activation="sigmoid",
                  optimizer="adam",
                  learn_rate=0.001,
-                 loss_func="mean_squared"):
+                 loss_func="mean_square"):
         """
 
         :param input_size: Scalar integer value - size of the input array
