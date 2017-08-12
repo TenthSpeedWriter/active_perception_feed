@@ -134,7 +134,7 @@ class Unicoder:
         # Therefore, the input shape will be (None, sum(n_0 ... n_i))
         self.input_shape = (None,
                             sum([e.output_size
-                                 for e in self.encoders.iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiikkkkoooooooooooooooooooitems()]))
+                                 for e in self.encoders.items()]))
         self.input = tflearn.input_data(shape=self.input_shape)
 
         # If no output size is specified, default to the rounded 3/4ths root
