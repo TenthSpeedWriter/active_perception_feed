@@ -1,4 +1,5 @@
 from uuid import uuid4
+import numpy as np
 import tensorflow as tf
 import tflearn
 
@@ -33,7 +34,7 @@ class LinearEncoder(InputStreamEncoder):
         :param loss_func: Defaults to mean squared; use cross-entropy for probability inputs.
         """
         # Generate a random UUID to use as the model ID if one is not provided.
-        self.model_id = model_id if model_id is not None else uuid4()
+        self.model_id = model_id if model_id is not None else str(uuid4())
         self.input_size = input_size
         self.output_size = output_size
 
@@ -113,12 +114,12 @@ class LinearEncoder(InputStreamEncoder):
 class Unicoder:
     """
     An autoencoder which accepts multiple InputStreamEncoders and trains on
-    their collective output at matching time segments.
+    their collective output at matching or interpolated time segments.
 
     In application, this can be used to unify the encodings of multiple
     InputStreamEncoders into a single Active Perception Feed. Our objective
     is to use this as a means of presenting scenarios-over-time to higher
-    level networks such as LSTM networks and Q-nets.
+    level applications such as LSTM networks and Q-nets.
 
     Not to be confused with something which converts things to UTF-8.
     """
@@ -128,22 +129,24 @@ class Unicoder:
         self.encoders = encoders
 
         # Use a random UUID as the model ID if one is not specified
-        self.model_id = model_id if model_id is not None else uuid4()
+        self.model_id = model_id if model_id is not None else str(uuid4())
 
         # The encoded data will be a number of (None, n) arrays with varying n.
         # Therefore, the input shape will be (None, sum(n_0 ... n_i))
         self.input_shape = (None,
                             sum([e.output_size
-                                 for e in self.encoders.items()]))
+                                 for name, e in self.encoders.items()]))
         self.input = tflearn.input_data(shape=self.input_shape)
 
         # If no output size is specified, default to the rounded 3/4ths root
         # of the input size. There's nothing magical about that value; it's
         # just a convenient default for a value you should really specify.
-        self.output_size = output_size if output_size is not None else int(self.input_shape[1]^0.75)
+        self.output_size = output_size if output_size is not None else int(self.input_shape[1] ** 0.75)
 
         self.encoder = tflearn.fully_connected(self.input, self.output_size,
-                                               activation="softmax")
+                                               activation="sigmoid")
+        self.decoder = tflearn.fully_connected(self.encoder, self.input_shape[1],
+                                               activation="sigmoid")
 
 
     # def train_encoders(self, sources):
@@ -158,25 +161,47 @@ class Unicoder:
     #     # be among these.
     #     [self.encoders[name].train(**values) for name, values in sources]
 
-    def construct(self, sources):
+    def construct(self, sources,
+                  optimizer="adam",
+                  learn_rate=0.001,
+                  loss_func="mean_square",
+                  tensorboard_verbose=0,
+
+                  epochs=3,
+                  batch_size=10):
         """
         Initializes and trains the unicoder itself. Should be called upon or
         immediately after instantiation.
 
         :param sources: A dict with k/v pairs of "encoder_name": training_data
         """
-        # Match each encoder with its input
-        encoders_and_sources = [(encoder, sources[name])
-                                for name, encoder in self.encoders.items]
-
-        # Use each to encode its respective training data
-        input_encodings = [encoder.encode(source)
-                           for encoder, source in encoders_and_sources]
-
-
-
-
         with tf.name_scope(self.model_id):
-            pass
-            #self.model =
-            #self
+            # Finish construction of net and model
+            self.net = tflearn.regression(self.decoder,
+                                          optimizer=optimizer,
+                                          learning_rate=learn_rate,
+                                          loss=loss_func)
+            self.model = tflearn.DNN(self.net,
+                                     tensorboard_verbose=tensorboard_verbose)
+
+            # Match each encoder with its training input
+            encoders_and_sources = [(encoder, sources[name])
+                                    for name, encoder in self.encoders.items()]
+
+            # Use each to encode its respective training data
+            input_encodings = [encoder.encode(source)
+                               for encoder, source in encoders_and_sources]
+
+            # Concatenate input arrays
+            input = np.concatenate(input_encodings,
+                                   axis=1)
+            #print(np.shape(input))
+            #print(self.input_shape)
+            
+
+            # Train to autoencode the incoming encodings
+            #run_id = "Input autoencoder training: " + str(self.model_id)
+            #self.model.fit(input, input,
+            #               n_epoch=epochs,
+             #              batch_size=batch_size,
+             #              run_id=run_id)

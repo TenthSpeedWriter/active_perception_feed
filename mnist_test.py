@@ -1,5 +1,5 @@
-import numpy as np
-import tflearn
+#import numpy as np
+#import tflearn
 import tflearn.datasets.mnist as mnist
 from apf import LinearEncoder, Unicoder
 
@@ -19,7 +19,6 @@ autoencoder.train(train_x,
 
 # Test encoding abilities
 test_encoding = autoencoder.encode(train_x)
-print(test_encoding)
 
 # Simulate multiple input streams
 encoders = {
@@ -31,7 +30,7 @@ encoders = {
 unicoder = Unicoder(encoders=encoders)
 
 # Attempt unicoder training
-#unicoder.train(sources={
-#    "foo": train_x,
-#    "bar": train_x
-#})
+unicoder.construct(sources={
+    "foo": train_x,
+    "bar": train_x
+})
